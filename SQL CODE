@@ -1,0 +1,116 @@
+create database portfolio_project_1;
+select * from dataset1;
+select * from  dataset2;
+
+-- " number of rows in a dataset"
+select count(*) from dataset1;
+select count(*) from dataset2;
+
+-- " dataset of jharkhand and bihar states "
+select * from dataset1 where state in("jharkhand", "bihar") order by state desc;
+
+-- " Total population of India"
+select sum(population) as "Total population" from dataset2;
+
+-- " Average growth and average literacy of India "
+select avg(growth) as 'Total Average Growth', avg(literacy) as 'Total Average Literacy' from dataset1;
+
+-- " Average growth percentage of top 5 states"
+select state, avg(growth) as " average growth of each state" from dataset1 
+group by state order by avg(growth) desc  limit 5;
+
+ -- "Average literacy rate of least two states greter than 70 percent"
+ select state,round(avg(literacy),0) as 'Average Literacy Rate' from dataset1 
+ group by state having round(avg(literacy),0) > 70 order by round(avg(literacy),0) limit 2;
+ 
+ -- "Top and Bottom 3 states in Literacy rate "
+ select * from(
+ select state,round(avg(literacy),0) as 'Average Literacy Rate' from dataset1 
+ group by state order by round(avg(literacy),0) desc limit 3 )a
+ union
+ select * from(
+ select state,round(avg(literacy),0) as 'Average Literacy Rate' from dataset1 
+ group by state order by round(avg(literacy),0) limit 3 )b;
+ 
+ -- " States starting with letter A having average sex ratio greater than 900"
+ select state, avg(sex_ratio) as Average_Sex_Ratio from dataset1
+ group by state  
+ having state like "a%" and avg(sex_ratio) > "900"
+ order by avg(sex_ratio) desc; 
+ 
+ -- "Joining both tables"
+ -- "Total Males and Females in each state
+SELECT
+    d.state,
+    SUM(d.males) AS Total_Males,
+    SUM(d.females) AS Total_Females
+FROM
+    (SELECT
+        c.district,
+        c.state,
+        c.population / (c.sex_ratio + 1) AS males,
+        (c.population * c.sex_ratio) / (c.sex_ratio + 1) AS females
+     FROM
+        (SELECT
+            a.district,
+            a.state,
+            a.sex_ratio / 1000 AS sex_ratio,
+            b.population
+         FROM
+            dataset1 a
+         INNER JOIN
+            dataset2 b ON a.district = b.district
+        ) c
+    ) d
+GROUP BY
+    d.state;
+    
+  -- total literacy rate
+
+
+select c.state,sum(literate_people) total_literate_pop,sum(illiterate_people) total_lliterate_pop from 
+(select d.district,d.state,round(d.literacy_ratio*d.population,0) literate_people,
+round((1-d.literacy_ratio)* d.population,0) illiterate_people from
+(select a.district,a.state,a.literacy/100 literacy_ratio,b.population from dataset1 a 
+inner join dataset2 b on a.district=b.district) d) c
+group by c.state;
+
+-- population in previous census
+
+
+select sum(m.previous_census_population) previous_census_population,sum(m.current_census_population) current_census_population from(
+select e.state,sum(e.previous_census_population) previous_census_population,sum(e.current_census_population) current_census_population from
+(select d.district,d.state,round(d.population/(1+d.growth),0) previous_census_population,d.population current_census_population from
+(select a.district,a.state,a.growth growth,b.population from dataset1 a inner join dataset2 b on a.district=b.district) d) e
+group by e.state)m;
+
+-- population vs area
+
+select (g.total_area/g.previous_census_population)  as previous_census_population_vs_area, (g.total_area/g.current_census_population) as 
+current_census_population_vs_area from
+(select q.*,r.total_area from (
+
+select '1' as keyy,n.* from
+(select sum(m.previous_census_population) previous_census_population,sum(m.current_census_population) current_census_population from(
+select e.state,sum(e.previous_census_population) previous_census_population,sum(e.current_census_population) current_census_population from
+(select d.district,d.state,round(d.population/(1+d.growth),0) previous_census_population,d.population current_census_population from
+(select a.district,a.state,a.growth growth,b.population from dataset1 a inner join dataset2 b on a.district=b.district) d) e
+group by e.state)m) n) q inner join (
+
+select '1' as keyy,z.* from (
+select sum(area_km2) total_area from dataset2)z) r on q.keyy=r.keyy)g;
+
+-- window 
+
+-- top 3 districts from each state with highest literacy rate
+
+
+select a.* from
+(select district,state,literacy,rank() over(partition by state order by literacy desc) rnk from dataset1) a
+
+where a.rnk in (1,2,3) order by state;
+
+  
+
+ 
+
